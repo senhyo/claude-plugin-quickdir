@@ -120,33 +120,35 @@ _qd_normalize_path_key() {
   if command -v cygpath &>/dev/null; then
     p=$(cygpath -u "$p" 2>/dev/null || echo "$p")
   fi
-  echo "${p,,}"  # lowercase (bash 4+)
+  printf '%s\n' "$p" | tr '[:upper:]' '[:lower:]'
 }
 
 # Merge history + bookmarks, deduplicated, history first then bookmark-only entries.
-# Deduplication key: lowercase Unix-normalized path with trailing slash stripped.
+# Deduplication key: lowercase path with trailing slash stripped.
+# Compatible with bash 3.2+ (macOS system bash).
 _qd_merged_paths() {
-  local -A seen=()
+  local seen=''
   local path key
 
-  # History entries (already sorted by recency)
+  _qd_emit_if_new() {
+    local p="$1"
+    local k
+    k=$(_qd_normalize_path_key "$p")
+    # Use newline-delimited string instead of associative array (bash 3.2 safe)
+    if ! printf '%s\n' "$seen" | grep -qxF "$k" 2>/dev/null; then
+      seen="${seen}"$'\n'"${k}"
+      echo "$p"
+    fi
+  }
+
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
-    key=$(_qd_normalize_path_key "$path")
-    if [[ -z "${seen[$key]+x}" ]]; then
-      seen["$key"]=1
-      echo "$path"
-    fi
+    _qd_emit_if_new "$path"
   done < <(_qd_history_paths)
 
-  # Bookmark-only entries (not already seen from history)
   while IFS= read -r path; do
     [[ -z "$path" ]] && continue
-    key=$(_qd_normalize_path_key "$path")
-    if [[ -z "${seen[$key]+x}" ]]; then
-      seen["$key"]=1
-      echo "$path"
-    fi
+    _qd_emit_if_new "$path"
   done < <(_qd_bookmark_list)
 }
 

@@ -23,6 +23,8 @@ teardown() { teardown_fake_home; }
   run _qd_merged_paths
   hist_line=$(echo "$output" | grep -n "history_only" | cut -d: -f1)
   bm_line=$(echo "$output" | grep -n "bookmark_only" | cut -d: -f1)
+  [[ -n "$hist_line" ]]
+  [[ -n "$bm_line" ]]
   [[ "$hist_line" -lt "$bm_line" ]]
 }
 

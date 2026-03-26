@@ -64,3 +64,40 @@ except Exception:
     [[ -e "$cwd" ]] && echo "$cwd"
   done <<< "$sorted"
 }
+
+# Print bookmarks, one per line (skips non-existent paths)
+_qd_bookmark_list() {
+  [[ -f "$QD_BOOKMARKS_FILE" ]] || return 0
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    [[ -e "$path" ]] && echo "$path"
+  done < "$QD_BOOKMARKS_FILE"
+}
+
+# Add a path to bookmarks
+_qd_bookmark_add() {
+  local path="${1:-$PWD}"
+  if [[ ! -e "$path" ]]; then
+    echo "Path does not exist: $path" >&2
+    return 1
+  fi
+  # Deduplicate: skip if already present (case-insensitive, no trailing slash)
+  local normalized="${path%/}"
+  if [[ -f "$QD_BOOKMARKS_FILE" ]] && grep -qi "^${normalized}/*$" "$QD_BOOKMARKS_FILE" 2>/dev/null; then
+    echo "Already bookmarked." >&2
+    return 0
+  fi
+  mkdir -p "$(dirname "$QD_BOOKMARKS_FILE")"
+  echo "$normalized" >> "$QD_BOOKMARKS_FILE"
+}
+
+# Remove a path from bookmarks
+_qd_bookmark_remove() {
+  local path="$1"
+  [[ -f "$QD_BOOKMARKS_FILE" ]] || return 0
+  # Remove matching line (portable: write to temp then replace)
+  local tmp
+  tmp=$(mktemp)
+  grep -v "^${path%/}/*$" "$QD_BOOKMARKS_FILE" > "$tmp" || true
+  mv "$tmp" "$QD_BOOKMARKS_FILE"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "senhyo-marketplace",
+  "owner": {
+    "name": "senhyo"
+  },
+  "metadata": {
+    "description": "Claude Code plugins by senhyo"
+  },
+  "plugins": [
+    {
+      "name": "quickdir",
+      "source": {
+        "source": "github",
+        "repo": "senhyo/claude-plugin-quickdir"
+      },
+      "description": "Quickly switch between recent Claude Code project directories",
+      "version": "1.0.0",
+      "homepage": "https://github.com/senhyo/claude-plugin-quickdir"
+    }
+  ]
+}

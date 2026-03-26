@@ -45,3 +45,13 @@ teardown() { teardown_fake_home; }
   [[ "$status" -eq 0 ]]
   [[ -z "$output" ]]
 }
+
+@test "_qd_select exits 1 and prints error when given no paths" {
+  run bash -c "
+    source '$BATS_TEST_DIRNAME/../shell/quickdir.sh'
+    export QD_FORCE_LIST=1
+    printf '' | _qd_select 2>/dev/null
+  "
+  [[ "$status" -eq 1 ]]
+  [[ -z "$output" ]]
+}

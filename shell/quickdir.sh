@@ -161,8 +161,10 @@ _qd_merged_paths() {
 _qd_select() {
   # Use fzf if available and not suppressed (paths from stdin, TTY for interaction)
   if [[ -z "${QD_FORCE_LIST:-}" ]] && command -v fzf &>/dev/null; then
-    fzf --prompt="Select project> " --height=40%
-    return
+    printf '%s\n' "${paths[@]}" | fzf --prompt="Select project> " --height=40%
+    local fzf_exit=$?
+    [[ "$fzf_exit" -eq 130 ]] && return 0
+    return "$fzf_exit"
   fi
 
   # Numbered list fallback — read ALL stdin lines into an array
@@ -183,7 +185,7 @@ _qd_select() {
     local idx=0
     while [[ "$idx" -lt "$path_count" ]]; do
       [[ -n "${all_lines[$idx]}" ]] && paths+=("${all_lines[$idx]}")
-      ((idx++))
+      idx=$(( idx + 1 ))
     done
     choice="${all_lines[$((total - 1))]}"
   else
@@ -207,6 +209,10 @@ _qd_select() {
   # Read choice interactively if not already supplied (QD_FORCE_LIST supplies it above)
   if [[ -z "${QD_FORCE_LIST:-}" ]]; then
     printf 'Enter number (or empty to cancel): ' >&2
+    if [[ ! -c /dev/tty ]]; then
+      echo "No terminal available for interactive selection." >&2
+      return 1
+    fi
     read -r choice < /dev/tty
   fi
 

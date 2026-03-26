@@ -10,8 +10,8 @@
     {
       "name": "quickdir",
       "source": {
-        "source": "github",
-        "repo": "senhyo/claude-plugin-quickdir"
+        "source": "url",
+        "url": "https://github.com/senhyo/claude-plugin-quickdir.git"
       },
       "description": "Quickly switch between recent Claude Code project directories",
       "version": "1.0.0",

@@ -2,5 +2,5 @@
   "name": "quickdir",
   "version": "1.0.0",
   "description": "Quickly switch between recent Claude Code project directories",
-  "commands": ["quickdir"]
+  "commands": ["./commands/"]
 }

@@ -24,12 +24,12 @@ make_fake_project() {
   local jsonl="$proj_dir/session.jsonl"
   # Write a minimal JSONL line with cwd
   # Use python (not python3) for Windows Git Bash compatibility; convert path with cygpath -w
-  python -c "import json,sys; print(json.dumps({'type':'start','cwd':sys.argv[1]}))" "$cwd" > "$jsonl"
+  _qd_python -c "import json,sys; print(json.dumps({'type':'start','cwd':sys.argv[1]}))" "$cwd" > "$jsonl"
 
   if [[ "$age_seconds" -gt 0 ]]; then
     # Make the file appear older so recency sorting can be tested (cross-platform)
     local win_jsonl
     win_jsonl=$(cygpath -w "$jsonl" 2>/dev/null || echo "$jsonl")
-    python -c "import os, time; os.utime(r'''$win_jsonl''', (time.time() - $age_seconds, time.time() - $age_seconds))"
+    _qd_python -c "import os,sys,time; t=time.time()-int(sys.argv[1]); os.utime(sys.argv[2],(t,t))" "$age_seconds" "$jsonl"
   fi
 }

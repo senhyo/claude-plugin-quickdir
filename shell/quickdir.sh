@@ -4,6 +4,17 @@
 : "${QD_CLAUDE_PROJECTS_DIR:=$HOME/.claude/projects}"
 : "${QD_BOOKMARKS_FILE:=$HOME/.config/quickdir/bookmarks.txt}"
 
+# Resolve the correct Python 3 interpreter (cross-platform).
+# On Windows Git Bash, python3 is a broken App Installer stub; python works.
+# On macOS/Linux, python3 is the correct command.
+_qd_python() {
+  if python3 -c "" 2>/dev/null; then
+    python3 "$@"
+  else
+    python "$@"
+  fi
+}
+
 # Convert a Unix path to a form Python can use (handles Windows Git Bash)
 _qd_py_path() {
   cygpath -w "$1" 2>/dev/null || echo "$1"
@@ -24,7 +35,7 @@ _qd_history_paths() {
     # Get mtime as epoch seconds; convert path for Windows Python compatibility
     local mtime win_jsonl
     win_jsonl=$(_qd_py_path "$jsonl")
-    mtime=$(python -c "import os; print(int(os.path.getmtime(r'''$win_jsonl''')))" 2>/dev/null) || continue
+    mtime=$(_qd_python -c "import os,sys; print(int(os.path.getmtime(sys.argv[1])))" "$win_jsonl" 2>/dev/null) || continue
     entries+=("$mtime $jsonl")
   done
 
@@ -40,7 +51,7 @@ _qd_history_paths() {
     jsonl="${entry#* }"
     local win_jsonl2
     win_jsonl2=$(_qd_py_path "$jsonl")
-    cwd=$(python -c "
+    cwd=$(_qd_python -c "
 import json, sys
 try:
     line = open(sys.argv[1]).readline()

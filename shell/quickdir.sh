@@ -101,9 +101,9 @@ _qd_bookmark_remove() {
 import sys
 bm_file, remove_path = sys.argv[1], sys.argv[2]
 try:
-    with open(bm_file) as f:
+    with open(bm_file, encoding='utf-8') as f:
         lines = f.readlines()
-    with open(bm_file, 'w') as f:
+    with open(bm_file, 'w', encoding='utf-8') as f:
         for line in lines:
             if line.rstrip('/\n') != remove_path.rstrip('/'):
                 f.write(line)
@@ -233,7 +233,11 @@ _qd_run() {
     return 0
   fi
 
-  cd "$selected" && claude
+  if ! cd "$selected"; then
+    echo "Cannot cd to: $selected" >&2
+    return 1
+  fi
+  claude
 }
 
 _qd_pick_and_remove() {
@@ -251,7 +255,7 @@ _qd_pick_and_remove() {
   fi
 
   # Check it is actually a bookmark (should always be true here, but be safe)
-  if ! grep -qF "${selected%/}" "$QD_BOOKMARKS_FILE" 2>/dev/null; then
+  if ! grep -qxF "${selected%/}" "$QD_BOOKMARKS_FILE" 2>/dev/null; then
     echo "That entry comes from Claude history and cannot be removed here." >&2
     return 1
   fi

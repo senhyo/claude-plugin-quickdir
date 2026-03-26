@@ -13,21 +13,19 @@ teardown() { teardown_fake_home; }
 }
 
 @test "_qd_bookmark_add writes path to bookmarks file" {
-  mkdir -p "/tmp/qd_bm_test"
-  _qd_bookmark_add "/tmp/qd_bm_test"
+  mkdir -p "$FAKE_HOME/bm_test"
+  _qd_bookmark_add "$FAKE_HOME/bm_test"
   run _qd_bookmark_list
-  [[ "$output" == *"/tmp/qd_bm_test"* ]]
-  rm -rf /tmp/qd_bm_test
+  [[ "$output" == *"$FAKE_HOME/bm_test"* ]]
 }
 
 @test "_qd_bookmark_add does not duplicate an existing bookmark" {
-  mkdir -p "/tmp/qd_bm_dup"
-  _qd_bookmark_add "/tmp/qd_bm_dup"
-  _qd_bookmark_add "/tmp/qd_bm_dup"
+  mkdir -p "$FAKE_HOME/bm_dup"
+  _qd_bookmark_add "$FAKE_HOME/bm_dup"
+  _qd_bookmark_add "$FAKE_HOME/bm_dup"
   run _qd_bookmark_list
-  count=$(echo "$output" | grep -c "/tmp/qd_bm_dup")
+  count=$(echo "$output" | grep -c "$FAKE_HOME/bm_dup")
   [[ "$count" -eq 1 ]]
-  rm -rf /tmp/qd_bm_dup
 }
 
 @test "_qd_bookmark_add exits 1 for non-existent path" {
@@ -36,10 +34,9 @@ teardown() { teardown_fake_home; }
 }
 
 @test "_qd_bookmark_remove removes the given path" {
-  mkdir -p "/tmp/qd_bm_rm"
-  _qd_bookmark_add "/tmp/qd_bm_rm"
-  _qd_bookmark_remove "/tmp/qd_bm_rm"
+  mkdir -p "$FAKE_HOME/bm_rm"
+  _qd_bookmark_add "$FAKE_HOME/bm_rm"
+  _qd_bookmark_remove "$FAKE_HOME/bm_rm"
   run _qd_bookmark_list
-  [[ "$output" != *"/tmp/qd_bm_rm"* ]]
-  rm -rf /tmp/qd_bm_rm
+  [[ "$output" != *"$FAKE_HOME/bm_rm"* ]]
 }

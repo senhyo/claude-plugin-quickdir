@@ -81,9 +81,9 @@ _qd_bookmark_add() {
     echo "Path does not exist: $path" >&2
     return 1
   fi
-  # Deduplicate: skip if already present (case-insensitive, no trailing slash)
+  # Deduplicate: skip if already present (no trailing slash)
   local normalized="${path%/}"
-  if [[ -f "$QD_BOOKMARKS_FILE" ]] && grep -qi "^${normalized}/*$" "$QD_BOOKMARKS_FILE" 2>/dev/null; then
+  if [[ -f "$QD_BOOKMARKS_FILE" ]] && grep -q "^${normalized}/*$" "$QD_BOOKMARKS_FILE" 2>/dev/null; then
     echo "Already bookmarked." >&2
     return 0
   fi
@@ -94,10 +94,20 @@ _qd_bookmark_add() {
 # Remove a path from bookmarks
 _qd_bookmark_remove() {
   local path="$1"
+  [[ -z "$path" ]] && return 0
   [[ -f "$QD_BOOKMARKS_FILE" ]] || return 0
-  # Remove matching line (portable: write to temp then replace)
-  local tmp
-  tmp=$(mktemp)
-  grep -v "^${path%/}/*$" "$QD_BOOKMARKS_FILE" > "$tmp" || true
-  mv "$tmp" "$QD_BOOKMARKS_FILE"
+  # Remove matching line using Python for safe exact-match without regex escaping
+  _qd_python - "$QD_BOOKMARKS_FILE" "${path%/}" << 'PYEOF'
+import sys
+bm_file, remove_path = sys.argv[1], sys.argv[2]
+try:
+    with open(bm_file) as f:
+        lines = f.readlines()
+    with open(bm_file, 'w') as f:
+        for line in lines:
+            if line.rstrip('/\n') != remove_path.rstrip('/'):
+                f.write(line)
+except FileNotFoundError:
+    pass
+PYEOF
 }

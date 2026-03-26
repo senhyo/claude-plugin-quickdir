@@ -152,6 +152,72 @@ _qd_merged_paths() {
   done < <(_qd_bookmark_list)
 }
 
+# Read paths from stdin, present a picker, print the chosen path to stdout.
+# Set QD_FORCE_LIST=1 to bypass fzf (used in tests).
+#
+# In QD_FORCE_LIST mode (tests): all input comes from one pipe — paths first,
+# then the choice as the final line. We read everything, split at the last line.
+# In interactive mode: paths come from pipe; choice is read from /dev/tty.
+_qd_select() {
+  # Use fzf if available and not suppressed (paths from stdin, TTY for interaction)
+  if [[ -z "${QD_FORCE_LIST:-}" ]] && command -v fzf &>/dev/null; then
+    fzf --prompt="Select project> " --height=40%
+    return
+  fi
+
+  # Numbered list fallback — read ALL stdin lines into an array
+  local -a all_lines=()
+  while IFS= read -r line; do
+    all_lines+=("$line")
+  done
+
+  # In QD_FORCE_LIST mode the last line is the choice; the rest are paths.
+  # In interactive mode every line is a path (choice is read from /dev/tty below).
+  local -a paths=()
+  local choice=""
+
+  if [[ -n "${QD_FORCE_LIST:-}" ]]; then
+    # Split: all but last line are paths; last line is the choice
+    local total="${#all_lines[@]}"
+    local path_count=$(( total > 0 ? total - 1 : 0 ))
+    local idx=0
+    while [[ "$idx" -lt "$path_count" ]]; do
+      [[ -n "${all_lines[$idx]}" ]] && paths+=("${all_lines[$idx]}")
+      ((idx++))
+    done
+    choice="${all_lines[$((total - 1))]}"
+  else
+    for line in "${all_lines[@]}"; do
+      [[ -n "$line" ]] && paths+=("$line")
+    done
+  fi
+
+  if [[ "${#paths[@]}" -eq 0 ]]; then
+    echo "No recent projects found. Use 'qd add' to add a bookmark." >&2
+    return 1
+  fi
+
+  # Print numbered list to stderr
+  local i=1
+  for p in "${paths[@]}"; do
+    printf '%3d) %s\n' "$i" "$p" >&2
+    ((i++))
+  done
+
+  # Read choice interactively if not already supplied (QD_FORCE_LIST supplies it above)
+  if [[ -z "${QD_FORCE_LIST:-}" ]]; then
+    printf 'Enter number (or empty to cancel): ' >&2
+    read -r choice < /dev/tty
+  fi
+
+  [[ -z "$choice" ]] && return 0
+
+  if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 ]] && [[ "$choice" -le "${#paths[@]}" ]]; then
+    echo "${paths[$((choice - 1))]}"
+  fi
+  return 0
+}
+
 # Public entrypoint
 qd() {
   case "${1:-}" in

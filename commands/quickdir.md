@@ -2,7 +2,52 @@
 description: Switch to a recent Claude project — opens a new terminal session in the chosen directory
 ---
 
-Run the shell command `qd list` and display the output as a numbered list.
+Read the project list directly (do NOT call `qd list`):
+
+1. Scan `~/.claude/projects/*/` — for each subdirectory, find the first `.jsonl` file, read its first line, and extract the `"cwd"` field using Python:
+```bash
+python3 -c "
+import os, sys, json, glob
+
+projects_dir = os.path.expanduser('~/.claude/projects')
+entries = []
+
+for proj in os.listdir(projects_dir):
+    proj_path = os.path.join(projects_dir, proj)
+    if not os.path.isdir(proj_path):
+        continue
+    jsonl_files = sorted(glob.glob(os.path.join(proj_path, '*.jsonl')))
+    if not jsonl_files:
+        continue
+    jsonl = jsonl_files[0]
+    try:
+        with open(jsonl, encoding='utf-8') as f:
+            first_line = f.readline()
+        data = json.loads(first_line)
+        cwd = data.get('cwd')
+        if cwd and os.path.exists(cwd):
+            mtime = os.path.getmtime(jsonl)
+            entries.append((mtime, cwd))
+    except Exception:
+        pass
+
+entries.sort(reverse=True)
+
+seen = set()
+for _, cwd in entries:
+    key = cwd.lower().rstrip('/\\\\')
+    if key not in seen:
+        seen.add(key)
+        print(cwd)
+"
+```
+
+2. Read bookmarks from `~/.config/quickdir/bookmarks.txt` (one path per line). Append any paths not already in the list above (case-insensitive, ignoring trailing slashes).
+
+3. If the combined list is empty, tell the user:
+> "No recent projects found. Open a project with Claude Code first, or create a bookmark by running `qd add` in your terminal (requires shell setup)."
+
+4. Display the results as a numbered list.
 
 Ask the user: "Which project? Enter a number (or press Enter to cancel):"
 
@@ -37,13 +82,5 @@ x-terminal-emulator -e bash -c 'cd {selected_path} && claude; exec bash'
 If OS detection is ambiguous (neither `Windows_NT` nor `Darwin`/`Linux` recognized), ask the user:
 > "Are you on Windows, macOS, or Linux?"
 Then use the appropriate command above.
-
-If `qd list` returns no output, tell the user:
-> "No recent projects found. Run `qd add /your/project/path` in your terminal to add a bookmark."
-
-If `qd` is not installed (command not found), tell the user:
-> "`qd` is not installed. Add this to your ~/.bashrc or ~/.zshrc:
-> `source /path/to/claude-plugin-quickdir/shell/quickdir.sh`
-> Then restart your terminal and try again."
 
 **Important:** This command opens a *new* terminal session. Your current Claude session continues unchanged.

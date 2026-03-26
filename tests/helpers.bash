@@ -10,7 +10,7 @@ setup_fake_home() {
 }
 
 teardown_fake_home() {
-  rm -rf "$FAKE_HOME"
+  [[ -n "$FAKE_HOME" ]] && rm -rf "$FAKE_HOME"
 }
 
 # Create a fake Claude project directory with a JSONL file containing a given cwd
@@ -23,10 +23,10 @@ make_fake_project() {
   mkdir -p "$proj_dir"
   local jsonl="$proj_dir/session.jsonl"
   # Write a minimal JSONL line with cwd
-  printf '{"type":"start","cwd":"%s"}\n' "$cwd" > "$jsonl"
+  python3 -c "import json,sys; print(json.dumps({'type':'start','cwd':sys.argv[1]}))" "$cwd" > "$jsonl"
 
   if [[ "$age_seconds" -gt 0 ]]; then
-    # Make the file appear older so recency sorting can be tested
-    touch -d "-${age_seconds} seconds" "$jsonl"
+    # Make the file appear older so recency sorting can be tested (cross-platform)
+    python3 -c "import os, time; os.utime('$jsonl', (time.time() - $age_seconds, time.time() - $age_seconds))"
   fi
 }

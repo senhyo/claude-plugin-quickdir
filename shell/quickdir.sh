@@ -54,7 +54,7 @@ _qd_history_paths() {
     cwd=$(_qd_python -c "
 import json, sys
 try:
-    line = open(sys.argv[1]).readline()
+    line = open(sys.argv[1], encoding='utf-8').readline()
     d = json.loads(line)
     print(d.get('cwd', ''))
 except Exception:
@@ -244,7 +244,7 @@ _qd_pick_and_remove() {
   fi
 
   local selected
-  selected=$(cat "$QD_BOOKMARKS_FILE" | _qd_select)
+  selected=$(_qd_bookmark_list | _qd_select)
 
   if [[ -z "$selected" ]]; then
     return 0

@@ -111,3 +111,51 @@ except FileNotFoundError:
     pass
 PYEOF
 }
+
+# Normalize a path to a canonical Unix-style form for deduplication key comparison.
+# On Windows Git Bash, converts "C:/foo" -> "/c/foo" via cygpath -u.
+# On other platforms, passes the path through unchanged.
+_qd_normalize_path_key() {
+  local p="${1%/}"   # strip trailing slash
+  if command -v cygpath &>/dev/null; then
+    p=$(cygpath -u "$p" 2>/dev/null || echo "$p")
+  fi
+  echo "${p,,}"  # lowercase (bash 4+)
+}
+
+# Merge history + bookmarks, deduplicated, history first then bookmark-only entries.
+# Deduplication key: lowercase Unix-normalized path with trailing slash stripped.
+_qd_merged_paths() {
+  local -A seen=()
+  local path key
+
+  # History entries (already sorted by recency)
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    key=$(_qd_normalize_path_key "$path")
+    if [[ -z "${seen[$key]+x}" ]]; then
+      seen["$key"]=1
+      echo "$path"
+    fi
+  done < <(_qd_history_paths)
+
+  # Bookmark-only entries (not already seen from history)
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    key=$(_qd_normalize_path_key "$path")
+    if [[ -z "${seen[$key]+x}" ]]; then
+      seen["$key"]=1
+      echo "$path"
+    fi
+  done < <(_qd_bookmark_list)
+}
+
+# Public entrypoint
+qd() {
+  case "${1:-}" in
+    list)   _qd_merged_paths ;;
+    add)    _qd_bookmark_add "${2:-$PWD}" ;;
+    rm)     _qd_pick_and_remove ;;
+    *)      _qd_run ;;
+  esac
+}

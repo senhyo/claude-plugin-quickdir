@@ -224,6 +224,41 @@ _qd_select() {
   return 0
 }
 
+_qd_run() {
+  local selected
+  selected=$(_qd_merged_paths | _qd_select)
+
+  if [[ -z "$selected" ]]; then
+    # User cancelled or no projects
+    return 0
+  fi
+
+  cd "$selected" && claude
+}
+
+_qd_pick_and_remove() {
+  # Only offer bookmarks for removal (not Claude history entries)
+  if [[ ! -f "$QD_BOOKMARKS_FILE" ]] || [[ ! -s "$QD_BOOKMARKS_FILE" ]]; then
+    echo "No bookmarks to remove." >&2
+    return 0
+  fi
+
+  local selected
+  selected=$(cat "$QD_BOOKMARKS_FILE" | _qd_select)
+
+  if [[ -z "$selected" ]]; then
+    return 0
+  fi
+
+  # Check it is actually a bookmark (should always be true here, but be safe)
+  if ! grep -qF "${selected%/}" "$QD_BOOKMARKS_FILE" 2>/dev/null; then
+    echo "That entry comes from Claude history and cannot be removed here." >&2
+    return 1
+  fi
+
+  _qd_bookmark_remove "$selected"
+}
+
 # Public entrypoint
 qd() {
   case "${1:-}" in
